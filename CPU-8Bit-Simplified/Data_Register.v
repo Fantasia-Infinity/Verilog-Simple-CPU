@@ -8,11 +8,17 @@ module Data_Register (
     output reg [7:0] data            // Operand data
 );
     reg [7:0] memory [15:0];  // 16 locations of 8-bit memory
+    integer i;
+
+    initial begin
+        for (i = 0; i < 16; i = i + 1)
+            memory[i] = 8'b0;
+    end
 
     always @(posedge clk) begin
         if (load && !is_instruction) begin
             // Load data into the specified address
-            memory[load_address[3:0]] <= cpu_input;
+            memory[load_address] <= cpu_input;
         end
     end
 

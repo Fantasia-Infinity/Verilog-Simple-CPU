@@ -1,25 +1,36 @@
 module Output_Register (
     input clk,
-    input [15:0] acc_value,        // Value from Accumulator
-    input [4:0] output_index,      // Index in the Output Register (5 bits for 32 slots)
-    input write_enable,            // Write enable signal for storing the result
-    input read_enable,             // Read enable signal to output stored value
-    output reg [15:0] output_value // Output wire to send the result to external logic
+    input reset,
+    input [15:0] acc_value,         // Value from the Accumulator
+    input [4:0]  output_index,      // Index in the Output Register (32 slots)
+    input        write_enable,      // Store acc_value into memory[output_index]
+    input        read_enable,       // Drive the selected slot onto output_value
+    output [15:0] output_value      // Output to the outside world
 );
-    reg [15:0] memory [31:0];  // 32 places, each 16 bits wide
+    reg [15:0] memory [31:0];
+    reg [15:0] held_value;          // Holds the last value read out
+    integer i;
+
+    initial begin
+        for (i = 0; i < 32; i = i + 1)
+            memory[i] = 16'b0;
+    end
 
     always @(posedge clk) begin
-        if (write_enable) begin
-            // Write the accumulator value to the specified index in the Output Register
+        if (write_enable)
             memory[output_index] <= acc_value;
-        end
     end
 
-    always @(*) begin
-        if (read_enable) begin
-            // Output the value stored in the specified index of the Output Register
-            output_value = memory[output_index];
-        end
+    // Capture the read value so it stays valid after the one-cycle READ pulse
+    // instead of relying on an inferred latch.
+    always @(posedge clk or posedge reset) begin
+        if (reset)
+            held_value <= 16'b0;
+        else if (read_enable)
+            held_value <= memory[output_index];
     end
+
+    // During the READ cycle the value appears immediately; afterwards the
+    // registered copy keeps driving the pins.
+    assign output_value = read_enable ? memory[output_index] : held_value;
 endmodule
-

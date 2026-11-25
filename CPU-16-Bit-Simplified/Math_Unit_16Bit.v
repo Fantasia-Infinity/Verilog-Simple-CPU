@@ -38,7 +38,7 @@ module Math_Unit_16Bit (
 
     // Zero Out (ZO): High if all bits in the result are 0
     // Instantiate the or16_to_1 module to perform OR reduction
-    or16_16Bit orGate (
+    or16_16bit orGate (
         .a(sum),
         .y(or_result)
     );

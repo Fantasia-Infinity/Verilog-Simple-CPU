@@ -2,16 +2,17 @@ module CPU (
     input clk,
     input reset,
     input [7:0] cpu_input,          // Unified input for loading both instruction and data
-    input [4:0] load_address,       // Address to load instruction or data (5 bits for instruction, 4 bits for data)
+    input [4:0] load_address,       // Address to load instruction or data
     input load,                     // Unified load signal for both instruction and data
     input is_instruction,           // Selector signal to differentiate between loading instruction or data
     output [7:0] output_value       // Output Register value on wire
 );
 
-    wire [4:0] program_counter;     // Program counter value (5 bits now)
+    wire [4:0] program_counter;     // Program counter value
     wire [7:0] instruction;         // Current instruction
     wire [7:0] data;                // Operand from Data Register
     wire [7:0] acc_value;           // Accumulator value
+    wire acc_we;                    // Accumulator write enable
     wire sub;                       // Subtraction signal
     wire [2:0] op_select;           // Operation select signal
     wire [3:0] address;             // Address for Data Register
@@ -31,7 +32,7 @@ module CPU (
     Instruction_Register ir (
         .clk(clk),
         .load(load),
-        .is_instruction(is_instruction),  // Selector to differentiate between instruction and data
+        .is_instruction(is_instruction),
         .load_address(load_address),
         .cpu_input(cpu_input),
         .program_counter(program_counter),
@@ -48,30 +49,31 @@ module CPU (
     Data_Register dr (
         .clk(clk),
         .load(load),
-        .is_instruction(is_instruction),  // Selector to differentiate between instruction and data
-        .load_address(load_address),
+        .is_instruction(is_instruction),
+        .load_address(load_address[3:0]),  // data memory is 16 words deep
         .cpu_input(cpu_input),
         .address(address),
         .data(data)
     );
 
-    // Control Unit (decodes the instruction and generates control signals for the ALU and Output Register)
+    // Control Unit (decodes the instruction and generates control signals)
     Control_Unit cu (
-        .clk(clk),
         .instruction(instruction),
+        .acc_we(acc_we),
         .sub(sub),
         .op_select(op_select),
         .write_enable(write_enable),
-        .read_enable(read_enable),  // Connect read_enable signal to the control unit
+        .read_enable(read_enable),
         .output_index(output_index)
     );
 
-    // Accumulator (stores the result of the ALU and provides one of the operands for the next operation)
+    // Accumulator (stores the result of the ALU and provides one of the operands)
     Accumulator acc (
         .clk(clk),
         .reset(reset),
-        .alu_result(result),          // Result from the ALU
-        .acc_value(acc_value)         // Output value of the accumulator
+        .we(acc_we),
+        .alu_result(result),
+        .acc_value(acc_value)
     );
 
     // ALU (performs arithmetic or logic operations based on the control signals)
@@ -80,7 +82,7 @@ module CPU (
         .b(data),                     // Operand from the Data Register
         .sub(sub),
         .op_select(op_select),
-        .result(result),              // Output of the ALU
+        .result(result),
         .cout(),                      // Carry out (not used)
         .overflow(),                  // Overflow (not used)
         .NO(),                        // Negative flag (not used)
@@ -90,10 +92,11 @@ module CPU (
     // Output Register (stores the value to be outputted)
     Output_Register OR (
         .clk(clk),
+        .reset(reset),
         .acc_value(acc_value),
         .output_index(output_index),
         .write_enable(write_enable),
-        .read_enable(read_enable),   // Connect read_enable signal to the Output Register
-        .output_value(output_value)  // Final output value on the wire
+        .read_enable(read_enable),
+        .output_value(output_value)
     );
 endmodule

@@ -1,4 +1,4 @@
-module or16_16Bit (
+module or16_16bit (
     input [15:0] a,  // 16-bit input
     output y         // 1-bit output
 );
